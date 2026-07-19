@@ -5,4 +5,13 @@ fastapi
 uvicorn
 requests
 langgraph
+langgraph-checkpoint
+langgraph-sdk
+langchain-core
 python-dotenv
+pandas
+numpy
+pillow
+opencv-python-headless
+pydantic
+httpx
