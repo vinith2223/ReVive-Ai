@@ -30,6 +30,10 @@ from typing import TypedDict
 
 import requests
 
+import onnxruntime as ort
+import cv2
+import numpy as np
+
 from .receivers_data import receivers_df
 
 VALID_CATEGORIES = ["Reuse", "Recycle", "Compost", "Donation"]
@@ -131,39 +135,107 @@ def encode_image(path: str) -> str:
 
 import os
 
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_model_path = os.path.join(_current_dir, "yolov8n.onnx")
+
+_session = ort.InferenceSession(_model_path, providers=["CPUExecutionProvider"])
+_input_name = _session.get_inputs()[0].name
+_IMG_SIZE = 320
+
+_CLASS_NAMES = [
+    "person","bicycle","car","motorcycle","airplane","bus","train","truck","boat",
+    "traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat",
+    "dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack",
+    "umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball",
+    "kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket",
+    "bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple",
+    "sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair",
+    "couch","potted plant","bed","dining table","toilet","tv","laptop","mouse",
+    "remote","keyboard","cell phone","microwave","oven","toaster","sink",
+    "refrigerator","book","clock","vase","scissors","teddy bear","hair drier",
+    "toothbrush"
+]
+
+_CONF_THRESHOLD = 0.4
+_IOU_THRESHOLD = 0.45
+
+
+def _preprocess(image_path, img_size=_IMG_SIZE):
+    img = cv2.imread(image_path)
+    if img is None:
+        raise ValueError(f"Could not read image: {image_path}")
+    img_resized = cv2.resize(img, (img_size, img_size))
+    img_rgb = img_resized[:, :, ::-1]
+    img_chw = img_rgb.transpose(2, 0, 1)
+    img_norm = np.ascontiguousarray(img_chw, dtype=np.float32) / 255.0
+    return np.expand_dims(img_norm, axis=0)
+
+
+def _nms(boxes, scores, iou_threshold=_IOU_THRESHOLD):
+    if len(boxes) == 0:
+        return []
+    x1, y1, x2, y2 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    areas = (x2 - x1) * (y2 - y1)
+    order = scores.argsort()[::-1]
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+        w = np.maximum(0.0, xx2 - xx1)
+        h = np.maximum(0.0, yy2 - yy1)
+        inter = w * h
+        iou = inter / (areas[i] + areas[order[1:]] - inter + 1e-9)
+        inds = np.where(iou <= iou_threshold)[0]
+        order = order[inds + 1]
+    return keep
+
 def yolo_detection(image_path: str) -> dict:
-    torch.set_num_threads(1)
-    if hasattr(torch, "set_num_interop_threads"):
-        torch.set_num_interop_threads(1)
-        
-    # Get the absolute path to where the model file is inside the directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(current_dir, "yolov8n.pt")
-    
-    # Load the pre-downloaded local model file
-    model = YOLO(model_path)
-    model.to("cpu")
-    
-    results = model.predict(
-        source=image_path, 
-        device="cpu", 
-        verbose=False, 
-        stream=False,      
-        augment=False,     
-        embed=None         
-    )
-    
+    input_tensor = _preprocess(image_path)
+    outputs = _session.run(None, {_input_name: input_tensor})
+
+    predictions = outputs[0]
+    if predictions.shape[1] == 84:
+        predictions = predictions[0].transpose(1, 0)
+    else:
+        predictions = predictions[0]
+
+    boxes_xywh = predictions[:, :4]
+    class_scores = predictions[:, 4:]
+    class_ids = np.argmax(class_scores, axis=1)
+    confidences = np.max(class_scores, axis=1)
+
+    mask = confidences > _CONF_THRESHOLD
+    boxes_xywh = boxes_xywh[mask]
+    confidences = confidences[mask]
+    class_ids = class_ids[mask]
+
     counts = {}
-    for r in results:
-        for box in r.boxes:
-            cls = int(box.cls[0])
-            name = model.names[cls]
-            counts[name] = counts.get(name, 0) + 1
-            
-    del model
-    del results
-    gc.collect()
-    
+    if len(boxes_xywh) == 0:
+        return counts
+
+    x_center, y_center, w, h = (
+        boxes_xywh[:, 0], boxes_xywh[:, 1], boxes_xywh[:, 2], boxes_xywh[:, 3]
+    )
+    x1 = x_center - w / 2
+    y1 = y_center - h / 2
+    x2 = x_center + w / 2
+    y2 = y_center + h / 2
+    boxes_xyxy = np.stack([x1, y1, x2, y2], axis=1)
+
+    final_class_ids = []
+    for cls_id in np.unique(class_ids):
+        cls_mask = class_ids == cls_id
+        keep = _nms(boxes_xyxy[cls_mask], confidences[cls_mask])
+        final_class_ids.extend([cls_id] * len(keep))
+
+    for cls_id in final_class_ids:
+        name = _CLASS_NAMES[int(cls_id)]
+        counts[name] = counts.get(name, 0) + 1
+
     return counts
 
 

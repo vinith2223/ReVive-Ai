@@ -1,6 +1,4 @@
-torch
-torchvision
-ultralytics
+onnxruntime
 fastapi
 uvicorn
 requests
