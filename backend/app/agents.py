@@ -22,6 +22,9 @@ import base64
 import json
 import os
 import re
+import gc
+import torch
+from ultralytics import YOLO
 from functools import lru_cache
 from typing import TypedDict
 
@@ -127,16 +130,27 @@ def encode_image(path: str) -> str:
 
 
 def yolo_detection(image_path: str) -> dict:
-    model = get_yolo_model()
-    results = model(image_path, verbose=False)
-
+    # Force PyTorch to use a single thread to minimize RAM footprint on Render Free Tier
+    torch.set_num_threads(1)
+    
+    # Load the model directly inside the function so it can be completely cleared after use
+    model = YOLO("yolov8n.pt")
+    
+    # Run the prediction using CPU and force float16 half-precision to cut memory usage in half
+    results = model.predict(source=image_path, device="cpu", half=True, verbose=False)
+    
     counts = {}
     for r in results:
         for box in r.boxes:
             cls = int(box.cls[0])
             name = model.names[cls]
             counts[name] = counts.get(name, 0) + 1
-
+            
+    # CRITICAL: Manually delete the massive model instances and force clear system RAM
+    del model
+    del results
+    gc.collect()
+    
     return counts
 
 
