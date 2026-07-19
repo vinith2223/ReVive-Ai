@@ -129,24 +129,28 @@ def encode_image(path: str) -> str:
         return base64.b64encode(f.read()).decode()
 
 
+import os
+
 def yolo_detection(image_path: str) -> dict:
-    # 1. Heavily limit PyTorch internally
     torch.set_num_threads(1)
     if hasattr(torch, "set_num_interop_threads"):
         torch.set_num_interop_threads(1)
         
-    # 2. Force model to load explicitly with settings optimization
-    model = YOLO("yolov8n.pt")
+    # Get the absolute path to where the model file is inside the directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(current_dir, "yolov8n.pt")
+    
+    # Load the pre-downloaded local model file
+    model = YOLO(model_path)
     model.to("cpu")
     
-    # 3. Predict with structural tracking turned off to minimize tracking arrays
     results = model.predict(
         source=image_path, 
         device="cpu", 
         verbose=False, 
-        stream=False,      # Don't hold generator memories
-        augment=False,     # Disable test-time augmentations to save RAM
-        embed=None         # Explicitly block embeddings memory allocation
+        stream=False,      
+        augment=False,     
+        embed=None         
     )
     
     counts = {}
@@ -156,7 +160,6 @@ def yolo_detection(image_path: str) -> dict:
             name = model.names[cls]
             counts[name] = counts.get(name, 0) + 1
             
-    # 4. EXTREME CLEANUP: Break references completely
     del model
     del results
     gc.collect()
