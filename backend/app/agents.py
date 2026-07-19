@@ -136,8 +136,8 @@ def yolo_detection(image_path: str) -> dict:
     # Load the model directly inside the function so it can be completely cleared after use
     model = YOLO("yolov8n.pt")
     
-    # Run the prediction using CPU and force float16 half-precision to cut memory usage in half
-    results = model.predict(source=image_path, device="cpu", half=True, verbose=False)
+    # Run the prediction using CPU (removed half=True to prevent CPU runtime errors)
+    results = model.predict(source=image_path, device="cpu", verbose=False)
     
     counts = {}
     for r in results:
