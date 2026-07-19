@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ReVive AI — Wedding waste, sorted by AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Work+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Petit+Formal+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ FLOWER SPRITE SHEET (reused everywhere via <use>) ============ -->
+<svg style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
+  <defs>
+    <symbol id="fl-marigold" viewBox="0 0 100 100">
+      <g fill="currentColor">
+        <g id="petalset">
+          <ellipse cx="50" cy="22" rx="15" ry="20"/>
+        </g>
+        <use href="#petalset" transform="rotate(45 50 50)"/>
+        <use href="#petalset" transform="rotate(90 50 50)"/>
+        <use href="#petalset" transform="rotate(135 50 50)"/>
+        <use href="#petalset" transform="rotate(180 50 50)"/>
+        <use href="#petalset" transform="rotate(225 50 50)"/>
+        <use href="#petalset" transform="rotate(270 50 50)"/>
+        <use href="#petalset" transform="rotate(315 50 50)"/>
+      </g>
+      <circle cx="50" cy="50" r="13" fill="#fff" opacity="0.55"/>
+    </symbol>
+
+    <symbol id="fl-rose" viewBox="0 0 100 100">
+      <g fill="currentColor">
+        <path d="M50 50 C30 40 25 15 50 8 C75 15 70 40 50 50 Z"/>
+        <path d="M50 50 C20 48 8 30 20 12 C38 12 48 30 50 50 Z" opacity="0.85"/>
+        <path d="M50 50 C80 48 92 30 80 12 C62 12 52 30 50 50 Z" opacity="0.85"/>
+        <path d="M50 50 C30 65 22 88 44 94 C56 84 54 62 50 50 Z" opacity="0.7"/>
+        <path d="M50 50 C70 65 78 88 56 94 C44 84 46 62 50 50 Z" opacity="0.7"/>
+      </g>
+      <circle cx="50" cy="48" r="9" fill="#fff" opacity="0.4"/>
+    </symbol>
+
+    <symbol id="fl-leaf" viewBox="0 0 100 100">
+      <path d="M50 92 C20 78 12 40 50 8 C88 40 80 78 50 92 Z" fill="currentColor"/>
+      <path d="M50 90 L50 12" stroke="#fff" stroke-opacity="0.35" stroke-width="3"/>
+    </symbol>
+
+    <symbol id="fl-jasmine" viewBox="0 0 100 100">
+      <g fill="currentColor">
+        <circle cx="50" cy="24" r="14"/>
+        <circle cx="74" cy="42" r="14"/>
+        <circle cx="65" cy="70" r="14"/>
+        <circle cx="35" cy="70" r="14"/>
+        <circle cx="26" cy="42" r="14"/>
+      </g>
+      <circle cx="50" cy="50" r="10" fill="#fff" opacity="0.6"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="thread-bg" aria-hidden="true"></div>
+<div class="petal-field" id="petalField" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand">
+      <svg class="brand-flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#fl-marigold"/></svg>
+      <span>ReVive <em>AI</em></span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#how-it-works">How it works</a>
+      <a href="#upload">Upload waste</a>
+      <a href="#results">Impact report</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO / UPLOAD -->
+  <section class="hero" id="upload">
+    <svg class="toran" viewBox="0 0 1200 90" preserveAspectRatio="none" aria-hidden="true">
+      <path class="toran-thread" d="M 0 10 Q 60 70 120 10 T 240 10 T 360 10 T 480 10 T 600 10 T 720 10 T 840 10 T 960 10 T 1080 10 T 1200 10"/>
+    </svg>
+
+    <div class="hero-copy">
+      <p class="eyebrow">✿ 95% AI &middot; 5% you ✿</p>
+      <div class="heading-wrap">
+        <h1>Your wedding's leftovers <span class="script">deserve</span><br>a second life.</h1>
+      </div>
+      <p class="hero-sub">
+        Upload a few photos or a short video of the leftover flowers, food, plastic,
+        fabric and decor. Six AI agents take it from there — identifying,
+        sorting, matching it to the nearest recycler or NGO, and scheduling pickup —
+        so almost none of it ends up in a landfill.
+      </p>
+      <ul class="hero-stats">
+        <li><span class="num">6</span><span class="label">AI agents working<br>in sequence</span></li>
+        <li><span class="num">95%</span><span class="label">of the work<br>done by AI</span></li>
+        <li><span class="num">0</span><span class="label">spreadsheets<br>you fill out</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-uploader">
+      <svg class="uploader-corner" viewBox="0 0 100 100" aria-hidden="true"><use href="#fl-rose"/></svg>
+      <form id="upload-form">
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload photos or a video of your wedding waste">
+          <svg class="dropzone-icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#fl-marigold"/></svg>
+          <p class="dropzone-title">Drop photos here</p>
+          <p class="dropzone-sub">or click to browse — JPG, PNG</p>
+          <input type="file" id="file-input" accept="image/*" multiple hidden>
+        </div>
+
+        <div class="preview-grid is-hidden" id="preview-grid"></div>
+
+        <button type="submit" class="btn-primary" id="analyze-btn" disabled>
+          Let AI sort it out
+        </button>
+        <p class="form-hint" id="form-hint">Add at least one photo or video to begin.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS: the garland -->
+  <section class="garland-section" id="how-it-works">
+    <p class="eyebrow center">The mala of agents</p>
+    <h2 class="section-title center">Strung together, one hands the next<br>exactly what it needs.</h2>
+
+    <div class="garland" id="garland">
+      <svg class="garland-thread" viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M 0 40 Q 100 140 200 40 T 400 40 T 600 40 T 800 40 T 1000 40 T 1200 40" />
+      </svg>
+
+      <div class="bead" data-stage="vision" style="--bead-color: var(--magenta);">
+        <div class="bead-marker"><svg viewBox="0 0 100 100"><use href="#fl-rose"/></svg></div>
+        <h3>Vision Agent</h3>
+        <p>Looks at every photo/frame and captions exactly what's in it.</p>
+      </div>
+      <div class="bead" data-stage="classification" style="--bead-color: var(--marigold);">
+        <div class="bead-marker"><svg viewBox="0 0 100 100"><use href="#fl-marigold"/></svg></div>
+        <h3>Classification Agent</h3>
+        <p>Sorts each item into Reuse, Recycle, Compost, or Donation.</p>
+      </div>
+      <div class="bead" data-stage="recommendation" style="--bead-color: var(--gold);">
+        <div class="bead-marker"><svg viewBox="0 0 100 100"><use href="#fl-jasmine"/></svg></div>
+        <h3>Recommendation Agent</h3>
+        <p>Matches waste to the nearest recycler, NGO, or composting unit.</p>
+      </div>
+      <div class="bead" data-stage="logistics" style="--bead-color: var(--leaf);">
+        <div class="bead-marker"><svg viewBox="0 0 100 100"><use href="#fl-leaf"/></svg></div>
+        <h3>Logistics Agent</h3>
+        <p>Builds a pickup plan — vehicle, stops, and total distance.</p>
+      </div>
+      <div class="bead" data-stage="sustainability" style="--bead-color: var(--magenta-deep);">
+        <div class="bead-marker"><svg viewBox="0 0 100 100"><use href="#fl-rose"/></svg></div>
+        <h3>Sustainability Agent</h3>
+        <p>Calculates waste diverted from landfill and CO₂ avoided.</p>
+      </div>
+      <div class="bead" data-stage="report" style="--bead-color: var(--marigold-deep);">
+        <div class="bead-marker"><svg viewBox="0 0 100 100"><use href="#fl-marigold"/></svg></div>
+        <h3>Report Agent</h3>
+        <p>Compiles it all into a report you can share or keep.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESSING OVERLAY -->
+  <div class="processing is-hidden" id="processing">
+    <div class="processing-card">
+      <div class="petal-loader" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <p class="processing-stage" id="processing-stage">Vision Agent is looking at your photos…</p>
+      <div class="processing-track">
+        <div class="processing-fill" id="processing-fill"></div>
+      </div>
+      <p class="processing-slow is-hidden" id="processing-slow">
+        Still working — on the very first run the vision model has to download,
+        which can take a few minutes.
+      </p>
+      <button type="button" class="btn-ghost processing-cancel" id="cancel-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <section class="results is-hidden" id="results">
+    <p class="eyebrow center">Your impact report</p>
+    <h2 class="section-title center">Here's where everything is going.</h2>
+
+    <div class="results-grid">
+
+      <div class="card card-waste">
+        <h3><svg class="card-icon" viewBox="0 0 100 100"><use href="#fl-marigold"/></svg>Detected waste</h3>
+        <div id="waste-list" class="waste-list"></div>
+      </div>
+
+      <div class="card card-receivers">
+        <h3><svg class="card-icon" viewBox="0 0 100 100"><use href="#fl-jasmine"/></svg>Recommended receivers</h3>
+        <p class="card-note">Demo partner directory for this prototype — swap in a real partner network before launch.</p>
+        <div id="receiver-list" class="receiver-list"></div>
+      </div>
+
+      <div class="card card-logistics">
+        <h3><svg class="card-icon" viewBox="0 0 100 100"><use href="#fl-leaf"/></svg>Pickup plan</h3>
+        <div id="logistics-body"></div>
+      </div>
+
+      <div class="card card-impact">
+        <h3><svg class="card-icon" viewBox="0 0 100 100"><use href="#fl-rose"/></svg>Sustainability impact</h3>
+        <div class="impact-numbers">
+          <div>
+            <span class="impact-num" id="impact-diverted">0</span>
+            <span class="impact-unit">kg diverted from landfill</span>
+          </div>
+          <div>
+            <span class="impact-num" id="impact-co2">0</span>
+            <span class="impact-unit">kg CO₂ avoided</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="results-actions">
+      <!-- <button class="btn-secondary" id="download-report">Download certificate (PDF)</button> -->
+      <button class="btn-secondary" id="reset-btn">Analyze more waste</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <svg class="footer-flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#fl-marigold"/></svg>
+  <p>ReVive AI — an autonomous assistant for sustainable wedding waste management.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

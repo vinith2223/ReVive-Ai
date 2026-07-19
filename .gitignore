@@ -1,0 +1,10 @@
+# Ignore the active environment secret files everywhere
+.env
+*.env
+backend/.env
+
+# Ignore your python virtual environment folder
+venv/
+__pycache__/
+*.pyc
+*.pt
