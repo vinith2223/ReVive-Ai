@@ -20,12 +20,7 @@ Adapted from the original notebook to:
 
 import base64
 import json
-import os
 import re
-import gc
-import torch
-from ultralytics import YOLO
-from functools import lru_cache
 from typing import TypedDict
 
 import requests
@@ -111,10 +106,6 @@ class EcoShaadiState(TypedDict, total=False):
 # Model / credential loading (lazy + cached)
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=1)
-def get_yolo_model():
-    from ultralytics import YOLO
-    return YOLO("yolov8n.pt")
 
 
 def _cloudflare_credentials():
