@@ -130,14 +130,24 @@ def encode_image(path: str) -> str:
 
 
 def yolo_detection(image_path: str) -> dict:
-    # Force single thread layout to minimize RAM allocation on Render Free Tier
+    # 1. Heavily limit PyTorch internally
     torch.set_num_threads(1)
-    
-    # Force model execution directly to CPU device arrays
+    if hasattr(torch, "set_num_interop_threads"):
+        torch.set_num_interop_threads(1)
+        
+    # 2. Force model to load explicitly with settings optimization
     model = YOLO("yolov8n.pt")
+    model.to("cpu")
     
-    # Process image purely via CPU pipeline
-    results = model.predict(source=image_path, device="cpu", verbose=False)
+    # 3. Predict with structural tracking turned off to minimize tracking arrays
+    results = model.predict(
+        source=image_path, 
+        device="cpu", 
+        verbose=False, 
+        stream=False,      # Don't hold generator memories
+        augment=False,     # Disable test-time augmentations to save RAM
+        embed=None         # Explicitly block embeddings memory allocation
+    )
     
     counts = {}
     for r in results:
@@ -146,7 +156,7 @@ def yolo_detection(image_path: str) -> dict:
             name = model.names[cls]
             counts[name] = counts.get(name, 0) + 1
             
-    # CRITICAL: Strip memory addresses immediately
+    # 4. EXTREME CLEANUP: Break references completely
     del model
     del results
     gc.collect()
