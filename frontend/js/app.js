@@ -1,4 +1,4 @@
-const API_BASE = window.location.origin.includes("file://") ? "http://127.0.0.1:8000" : "";
+const API_BASE = window.location.origin.includes("file://") ? "https://revive-ai-backend.onrender.com" : "";
 
 function req(id) {
   const el = document.getElementById(id);
