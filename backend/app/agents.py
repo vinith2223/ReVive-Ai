@@ -272,6 +272,9 @@ Example 2:
 {
   "items":[]
 }
+
+Return raw JSON only. Do not include markdown code fences, explanations,
+or any text before or after the JSON object.
 """
 
 
@@ -301,6 +304,98 @@ def vision_llm(image_path: str) -> str:
     response.raise_for_status()
     result = response.json()
     return result["result"]["response"]
+
+
+# ---------------------------------------------------------------------------
+# JSON extraction helpers
+# ---------------------------------------------------------------------------
+
+def _strip_markdown_fences(text: str) -> str:
+    """Remove ```json ... ``` or ``` ... ``` wrappers if present."""
+    text = text.strip()
+    if text.startswith("```"):
+        # drop first fence line (``` or ```json)
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1:]
+        # drop trailing fence
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3]
+    return text.strip()
+
+
+def extract_json_object(text: str):
+    """
+    Find the first top-level, brace-balanced JSON object in text.
+    Unlike a greedy regex (\\{.*\\}), this won't glue together multiple
+    JSON-looking fragments if the model echoes extra text/examples.
+    Returns the matched substring, or None if no balanced object is found.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for i in range(start, len(text)):
+        char = text[i]
+
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+
+    return None  # unbalanced / truncated output
+
+
+def _repair_common_json_issues(text: str) -> str:
+    """Best-effort cleanup for the most common LLM JSON mistakes."""
+    # remove trailing commas before } or ]
+    text = re.sub(r",\s*([}\]])", r"\1", text)
+    return text
+
+
+def parse_vision_output(vision_output: str, image_path: str = "") -> tuple:
+    """
+    Try to turn the raw vision_llm string into a dict.
+    Returns (data_or_None, warning_or_None).
+    """
+    cleaned = _strip_markdown_fences(vision_output)
+
+    candidate = extract_json_object(cleaned)
+    if candidate is None:
+        print(f"[vision_agent] RAW OUTPUT (no JSON object found) for {image_path}: {vision_output!r}")
+        return None, "Vision LLM returned no parseable JSON object"
+
+    try:
+        return json.loads(candidate), None
+    except json.JSONDecodeError as exc:
+        print(f"[vision_agent] JSON parsing failed on {image_path}: {exc}")
+        print(f"[vision_agent] RAW CANDIDATE: {candidate!r}")
+
+        # one repair attempt before giving up
+        try:
+            repaired = _repair_common_json_issues(candidate)
+            data = json.loads(repaired)
+            print(f"[vision_agent] Recovered via repair for {image_path}")
+            return data, None
+        except json.JSONDecodeError as exc2:
+            return None, f"Vision LLM returned unparseable output: {exc2}"
 
 
 # ---------------------------------------------------------------------------
@@ -338,13 +433,9 @@ def _detect_for_image(image_path: str) -> tuple:
     if isinstance(vision_output, dict):
         data = vision_output
     elif isinstance(vision_output, str):
-        match = re.search(r"\{.*\}", vision_output, re.DOTALL)
-        if match:
-            try:
-                data = json.loads(match.group())
-            except json.JSONDecodeError as exc:
-                print(f"[vision_agent] JSON parsing failed: {exc}")
-                warning = f"Vision LLM returned unparseable output: {exc}"
+        data, parse_warning = parse_vision_output(vision_output, image_path)
+        if parse_warning:
+            warning = parse_warning
 
     if data and "items" in data:
         for item in data["items"]:
@@ -387,7 +478,6 @@ def vision_agent(state: EcoShaadiState) -> dict:
         })
 
     return {"detected_items": final_items, "vision_warnings": warnings}
-
 
 # ---------------------------------------------------------------------------
 # Agent 2: Classification Agent
